@@ -69,11 +69,16 @@ Claude Codeの設定ファイルに以下を追加:
     "task-workflow": {
       "command": "node",
       "args": ["/path/to/task-list/dist/mcp/index.js"],
-      "cwd": "/path/to/task-list"
+      "cwd": "/path/to/task-list",
+      "env": {
+        "TASKS_DIR": "/path/to/task-list"
+      }
     }
   }
 }
 ```
+
+**注意**: `TASKS_DIR`環境変数を設定することで、Claude Codeをどのディレクトリで実行しても、tasks.jsonは常にtask-listのルートディレクトリに作成されます。
 
 ## MCPツールの使用例
 

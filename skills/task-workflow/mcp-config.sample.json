@@ -6,7 +6,8 @@
       "cwd": "/path/to/task-list",
       "description": "Task Monitor TUI - セッション対応タスク管理システム",
       "env": {
-        "NODE_ENV": "production"
+        "NODE_ENV": "production",
+        "TASKS_DIR": "/path/to/task-list"
       }
     }
   }

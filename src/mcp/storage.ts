@@ -1,8 +1,10 @@
 import { readFileSync, writeFileSync, existsSync, renameSync } from 'fs';
+import { join } from 'path';
 import { Task, TaskStatus, SessionTasks } from '../types.js';
 
-const TASKS_FILE = 'tasks.json';
-const BACKUP_FILE = 'tasks.json.backup';
+const TASKS_DIR = process.env.TASKS_DIR || process.cwd();
+const TASKS_FILE = join(TASKS_DIR, 'tasks.json');
+const BACKUP_FILE = join(TASKS_DIR, 'tasks.json.backup');
 
 export function readSessionTasks(): SessionTasks {
   if (!existsSync(TASKS_FILE)) {

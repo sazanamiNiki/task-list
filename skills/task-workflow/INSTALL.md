@@ -89,13 +89,19 @@ nano ~/.config/claude-code/config.json
     "task-workflow": {
       "command": "node",
       "args": ["/absolute/path/to/task-list/dist/mcp/index.js"],
-      "cwd": "/absolute/path/to/task-list"
+      "cwd": "/absolute/path/to/task-list",
+      "env": {
+        "TASKS_DIR": "/absolute/path/to/task-list"
+      }
     }
   }
 }
 ```
 
-**重要**: パスは絶対パスで指定してください。
+**重要**:
+- パスは絶対パスで指定してください
+- `TASKS_DIR`環境変数でtasks.jsonの保存先を指定します（task-listのルートディレクトリ）
+- この設定により、Claude Codeをどのディレクトリで実行しても、tasks.jsonは常にtask-listのルートに作成されます
 
 ### スキルのインストール
 
@@ -158,7 +164,10 @@ notepad $env:USERPROFILE\.config\claude-code\config.json
     "task-workflow": {
       "command": "node",
       "args": ["C:\\path\\to\\task-list\\dist\\mcp\\index.js"],
-      "cwd": "C:\\path\\to\\task-list"
+      "cwd": "C:\\path\\to\\task-list",
+      "env": {
+        "TASKS_DIR": "C:\\path\\to\\task-list"
+      }
     }
   }
 }
