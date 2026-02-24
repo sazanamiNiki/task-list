@@ -1,0 +1,38 @@
+{
+  "name": "task-monitor-tui",
+  "version": "1.0.0",
+  "description": "React Blessedを使用したタスク監視TUIアプリケーション",
+  "main": "dist/tui/index.js",
+  "type": "module",
+  "bin": {
+    "task-tui": "./dist/tui/index.js",
+    "task-mcp": "./dist/mcp/index.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/tui/index.js",
+    "dev": "tsc && node dist/tui/index.js",
+    "watch": "tsc --watch",
+    "mcp": "node dist/mcp/index.js"
+  },
+  "keywords": [
+    "blessed",
+    "react-blessed",
+    "tui",
+    "task-monitor",
+    "cli"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.27.0",
+    "blessed": "^0.1.81",
+    "chokidar": "^3.6.0",
+    "zod": "^4.3.6"
+  },
+  "devDependencies": {
+    "@types/blessed": "^0.1.2",
+    "@types/node": "^20.11.0",
+    "typescript": "^5.3.3"
+  }
+}

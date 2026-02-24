@@ -12,3 +12,8 @@ Thumbs.db
 # 一時ファイル
 *.log
 *.tmp
+
+# Node.js
+node_modules/
+dist/
+package-lock.json

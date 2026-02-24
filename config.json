@@ -1,0 +1,39 @@
+{
+  "statusDisplay": {
+    "pending": {
+      "icon": "◯",
+      "iconColor": "gray",
+      "textColor": "gray",
+      "strikethrough": false,
+      "useSpinner": false
+    },
+    "in_progress": {
+      "icon": "",
+      "iconColor": "yellow",
+      "textColor": "white",
+      "strikethrough": false,
+      "useSpinner": true
+    },
+    "check": {
+      "icon": "👀",
+      "iconColor": "magenta",
+      "textColor": "magenta",
+      "strikethrough": false,
+      "useSpinner": false
+    },
+    "done": {
+      "icon": "✔",
+      "iconColor": "green",
+      "textColor": "gray",
+      "strikethrough": true,
+      "useSpinner": false
+    },
+    "error": {
+      "icon": "✖",
+      "iconColor": "red",
+      "textColor": "red",
+      "strikethrough": false,
+      "useSpinner": false
+    }
+  }
+}
