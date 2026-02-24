@@ -97,6 +97,49 @@ nano ~/.config/claude-code/config.json
 
 **重要**: パスは絶対パスで指定してください。
 
+### スキルのインストール
+
+Claude Codeでスキルを使用したい**各プロジェクト**に、スキルファイルをコピーします。
+
+#### macOS / Linux
+
+```bash
+# スキルを使用したいプロジェクトに移動
+cd ~/my-project
+
+# .claudeディレクトリを作成
+mkdir -p .claude/skills
+
+# task-workflowスキルをコピー
+cp -r /path/to/task-list/skills/task-workflow .claude/skills/
+
+# 確認
+ls .claude/skills/task-workflow/skill.md
+```
+
+#### Windows
+
+PowerShellで実行:
+
+```powershell
+# スキルを使用したいプロジェクトに移動
+cd C:\Users\YourName\my-project
+
+# .claudeディレクトリを作成
+New-Item -ItemType Directory -Force -Path .claude\skills
+
+# task-workflowスキルをコピー
+Copy-Item -Recurse C:\path\to\task-list\skills\task-workflow .claude\skills\
+
+# 確認
+Get-Item .claude\skills\task-workflow\skill.md
+```
+
+以下のファイルが存在すればOK:
+- `.claude/skills/task-workflow/skill.md` (Claude Code用の指示書)
+- `.claude/skills/task-workflow/skill.json` (スキル定義)
+- `.claude/skills/task-workflow/README.md`
+
 ### Windows
 
 PowerShellで設定:
@@ -123,7 +166,9 @@ notepad $env:USERPROFILE\.config\claude-code\config.json
 
 ### 設定の確認
 
-Claude Codeを再起動後、以下のコマンドで確認:
+Claude Codeを再起動後、以下を確認:
+
+#### MCPサーバーの確認
 
 ```
 MCPサーバーのリストを表示してください
@@ -132,9 +177,42 @@ MCPサーバーのリストを表示してください
 `task-workflow`が表示されればOK。
 
 利用可能なツール:
-- `add_tasks`
-- `update_task`
-- `clear_tasks`
+- `add_tasks`: タスクの一括追加
+- `update_task`: タスクステータスの更新
+- `clear_tasks`: タスクのクリア
+
+#### スキルの確認
+
+Claude Codeでプロジェクトを開き、以下を確認:
+
+1. **スキルファイルの確認**:
+   ```bash
+   # プロジェクトルートで実行
+   ls -la .claude/skills/task-workflow/skill.md
+   ```
+   ファイルが存在すればOK。
+
+2. **スキルの動作確認**:
+   スキルをインストールしたプロジェクトでClaude Codeを起動し、以下のようなリクエストを実行:
+   ```
+   簡単な機能を3ステップで実装してください
+   ```
+
+   実行計画作成時に、自動的にタスクが`tasks.json`に追加されればスキルが正常に動作しています。
+
+3. **TUIでの確認**:
+   task-listリポジトリで別ターミナルを開き、TUIアプリを起動:
+   ```bash
+   # task-listリポジトリに移動
+   cd /path/to/task-list
+
+   # プロジェクト名を指定してTUI起動
+   SESSION=my-project npm start
+   ```
+
+   （`my-project`は手順2で作業していたプロジェクト名に置き換えてください）
+
+   追加されたタスクがリアルタイムで表示されればOK。
 
 ## 初期設定
 
@@ -279,14 +357,6 @@ npm run build
 npm run watch
 ```
 
-### テスト実行
-
-```bash
-# 単体テスト
-npm test
-
-# E2Eテスト
-npm run test:e2e
 ```
 
 ### コントリビューション
