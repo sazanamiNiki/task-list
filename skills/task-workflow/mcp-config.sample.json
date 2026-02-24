@@ -1,0 +1,13 @@
+{
+  "mcpServers": {
+    "task-workflow": {
+      "command": "node",
+      "args": ["dist/mcp/index.js"],
+      "cwd": "/path/to/task-list",
+      "description": "Task Monitor TUI - セッション対応タスク管理システム",
+      "env": {
+        "NODE_ENV": "production"
+      }
+    }
+  }
+}

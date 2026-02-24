@@ -1,0 +1,35 @@
+{
+  "name": "task-workflow",
+  "version": "1.0.0",
+  "description": "セッション対応のタスク管理TUI + MCPサーバー。複数プロジェクトのタスクをリアルタイムで監視・管理",
+  "author": "bunchoniki",
+  "type": "mcp-server",
+  "category": "productivity",
+  "keywords": [
+    "task-management",
+    "tui",
+    "mcp",
+    "blessed",
+    "workflow",
+    "session",
+    "real-time"
+  ],
+  "requires": {
+    "node": ">=18.0.0"
+  },
+  "mcp": {
+    "command": "node",
+    "args": ["dist/mcp/index.js"],
+    "tools": [
+      "add_tasks",
+      "update_task",
+      "clear_tasks"
+    ]
+  },
+  "installation": {
+    "steps": [
+      "npm install",
+      "npm run build"
+    ]
+  }
+}
