@@ -1,83 +1,105 @@
 # Task Workflow Skill
 
-実行計画に基づいてタスクを自動的に管理するスキルです。
+Automatically manages tasks based on execution plans.
 
-## スキルの発動条件
+## MANDATORY RULES — Claude Code MUST follow these rules when this skill is loaded
 
-このスキルは以下の状況で自動的に有効化されます：
+### Rule 1: Before ExitPlanMode — CRITICAL
 
-1. **EnterPlanMode を使用する時**: 実行計画を作成する前
-2. **ExitPlanMode を使用する時**: 実行計画を完了した後
-3. **実装作業の各ステップを完了した時**: コード生成、ファイル編集、ビルドなど
+**IMMEDIATELY before calling the ExitPlanMode tool, you MUST execute the following:**
 
-## セッション名の取得
+1. Get session name: Run `basename $(pwd)`
+2. Extract step titles from the execution plan (each bullet point item)
+3. Call `mcp__task-workflow__add_tasks` MCP tool to create tasks
+4. Record the returned task IDs (for later use with update_task)
+5. Then call ExitPlanMode
 
-タスクのセッション名は、カレントディレクトリ名から自動的に取得します：
+**This is MANDATORY. You MUST execute these steps IMMEDIATELY before ExitPlanMode.**
+
+### Rule 2: During Step Implementation — MANDATORY
+
+**For each implementation step, update task status as follows:**
+
+- **When starting a step:** Call `mcp__task-workflow__update_task` with `status: "in_progress"`
+- **When completing a step:**
+  - File editing complete, code generation complete → `status: "done"`
+  - Build execution, test execution → `status: "check"` (requires user confirmation)
+  - Error occurred → `status: "error"`
+
+### Rule 3: When All Tasks Complete
+
+- When all tasks become `done` or `check`, confirm with user using AskUserQuestion, then call `mcp__task-workflow__clear_tasks`
+
+---
+
+## Getting Session Name
+
+The task session name is automatically obtained from the current directory name:
 
 ```typescript
-// セッション名の取得例
+// Example of getting session name
 const currentDir = process.cwd();
 const sessionId = currentDir.split('/').pop() || 'default';
 ```
 
-実際には、以下のようにbashコマンドで取得します：
+In practice, get it using this bash command:
 
 ```bash
 basename $(pwd)
 ```
 
-## タスク管理のワークフロー
+## Task Management Workflow
 
-### 1. 実行計画作成時（ExitPlanMode 直前）
+### 1. When Creating Execution Plan (Before ExitPlanMode)
 
-実行計画を完成させたら、**ExitPlanMode を呼び出す前に**、計画の各ステップをタスクとして追加します。
+After completing the execution plan, **before calling ExitPlanMode**, add each step of the plan as a task.
 
-**手順:**
+**Procedure:**
 
-1. セッション名を取得
-2. 実行計画から各ステップのタイトルを抽出
-3. `add_tasks` MCPツールを呼び出してタスクを作成
-4. 作成されたタスクのIDを記録（後で更新するため）
+1. Get session name
+2. Extract step titles from the execution plan
+3. Call `mcp__task-workflow__add_tasks` MCP tool to create tasks
+4. Record the created task IDs (for later updates)
 
-**例:**
+**Example:**
 
-実行計画:
+Execution plan:
 ```
-Phase 1: 認証システムの実装
-1. ユーザースキーマの作成
-2. ログインAPIの実装
-3. トークン検証ミドルウェアの追加
+Phase 1: Authentication System Implementation
+1. Create user schema
+2. Implement login API
+3. Add token validation middleware
 
-Phase 2: テストとドキュメント
-4. ユニットテストの追加
-5. APIドキュメントの更新
+Phase 2: Testing and Documentation
+4. Add unit tests
+5. Update API documentation
 ```
 
-MCPツール呼び出し:
+MCP tool call:
 ```json
 {
-  "name": "add_tasks",
+  "name": "mcp__task-workflow__add_tasks",
   "arguments": {
     "sessionId": "my-project",
     "titles": [
-      "ユーザースキーマの作成",
-      "ログインAPIの実装",
-      "トークン検証ミドルウェアの追加",
-      "ユニットテストの追加",
-      "APIドキュメントの更新"
+      "Create user schema",
+      "Implement login API",
+      "Add token validation middleware",
+      "Add unit tests",
+      "Update API documentation"
     ]
   }
 }
 ```
 
-### 2. 各ステップ開始時
+### 2. When Starting Each Step
 
-ステップの実装を開始する際、該当タスクのステータスを `in_progress` に更新します。
+When starting to implement a step, update the corresponding task status to `in_progress`.
 
-**MCPツール呼び出し:**
+**MCP tool call:**
 ```json
 {
-  "name": "update_task",
+  "name": "mcp__task-workflow__update_task",
   "arguments": {
     "sessionId": "my-project",
     "id": 1,
@@ -86,24 +108,24 @@ MCPツール呼び出し:
 }
 ```
 
-### 3. 各ステップ完了時
+### 3. When Completing Each Step
 
-ステップが完了したら、以下のルールに従ってステータスを更新します：
+When a step is complete, update the status according to the following rules:
 
-#### ステータス: `done`
+#### Status: `done`
 
-以下の場合は `done` に設定：
-- ファイルの作成・編集が完了した
-- コードの生成が完了した
-- 設定ファイルの更新が完了した
-- 依存関係のインストールが完了した
-- 自動化された操作が成功した
-- **ユーザーが次のステップに自動で進むことを許容している**
+Set to `done` in the following cases:
+- File creation/editing completed
+- Code generation completed
+- Configuration file update completed
+- Dependency installation completed
+- Automated operation succeeded
+- **User allows automatic progression to next step**
 
-**MCPツール呼び出し:**
+**MCP tool call:**
 ```json
 {
-  "name": "update_task",
+  "name": "mcp__task-workflow__update_task",
   "arguments": {
     "sessionId": "my-project",
     "id": 1,
@@ -112,19 +134,19 @@ MCPツール呼び出し:
 }
 ```
 
-#### ステータス: `check`
+#### Status: `check`
 
-以下の場合は `check` に設定：
-- ビルドやテストを実行した（結果の確認が必要）
-- 重要な設定変更を行った（レビューが必要）
-- 外部サービスへのデプロイを行った（確認が必要）
-- **ユーザーの確認や承認を仰ぐ必要がある**
-- エラーや警告が発生した
+Set to `check` in the following cases:
+- Build or test executed (results need confirmation)
+- Important configuration change made (review needed)
+- External service deployment performed (confirmation needed)
+- **User confirmation or approval required**
+- Errors or warnings occurred
 
-**MCPツール呼び出し:**
+**MCP tool call:**
 ```json
 {
-  "name": "update_task",
+  "name": "mcp__task-workflow__update_task",
   "arguments": {
     "sessionId": "my-project",
     "id": 2,
@@ -133,17 +155,17 @@ MCPツール呼び出し:
 }
 ```
 
-#### ステータス: `error`
+#### Status: `error`
 
-以下の場合は `error` に設定：
-- ステップの実行中にエラーが発生した
-- ビルドやテストが失敗した
-- 依存関係のインストールが失敗した
+Set to `error` in the following cases:
+- Error occurred during step execution
+- Build or test failed
+- Dependency installation failed
 
-**MCPツール呼び出し:**
+**MCP tool call:**
 ```json
 {
-  "name": "update_task",
+  "name": "mcp__task-workflow__update_task",
   "arguments": {
     "sessionId": "my-project",
     "id": 3,
@@ -152,19 +174,19 @@ MCPツール呼び出し:
 }
 ```
 
-### 4. 完了タスクのクリア
+### 4. Clearing Completed Tasks
 
-すべてのタスクが完了したら、ユーザーに確認してから `done` ステータスのタスクをクリアします。
+When all tasks are complete, confirm with the user before clearing tasks with `done` status.
 
-**手順:**
+**Procedure:**
 
-1. **全タスク完了の検出**
+1. **Detect all tasks complete**
 
-   すべてのタスクが `done` または `check` ステータスになったことを確認します。`pending`, `in_progress`, `error` のタスクが残っている場合は、クリア処理を行いません。
+   Confirm that all tasks have `done` or `check` status. Do not perform clearing if any tasks remain with `pending`, `in_progress`, or `error` status.
 
-2. **ユーザーへの確認**
+2. **Confirm with user**
 
-   AskUserQuestionツールを使用して、ユーザーに確認を求めます：
+   Use the AskUserQuestion tool to request confirmation:
 
    ```json
    {
@@ -172,16 +194,16 @@ MCPツール呼び出し:
      "arguments": {
        "questions": [
          {
-           "question": "すべてのタスクが完了しました。完了済みタスク（doneステータス）をクリアしますか？",
-           "header": "タスククリア",
+           "question": "All tasks completed. Clear completed tasks (done status)?",
+           "header": "Clear Tasks",
            "options": [
              {
-               "label": "クリアする",
-               "description": "doneステータスのタスクを削除します"
+               "label": "Clear",
+               "description": "Delete tasks with done status"
              },
              {
-               "label": "保持する",
-               "description": "タスクをそのまま残します"
+               "label": "Keep",
+               "description": "Keep tasks as is"
              }
            ],
            "multiSelect": false
@@ -191,14 +213,14 @@ MCPツール呼び出し:
    }
    ```
 
-3. **ユーザーの回答に応じた処理**
+3. **Process based on user response**
 
-   **ユーザーが「クリアする」を選択した場合:**
+   **If user selects "Clear":**
 
-   `clear_tasks` MCPツールを呼び出します：
+   Call `mcp__task-workflow__clear_tasks` MCP tool:
    ```json
    {
-     "name": "clear_tasks",
+     "name": "mcp__task-workflow__clear_tasks",
      "arguments": {
        "sessionId": "my-project",
        "clearAll": false
@@ -206,115 +228,114 @@ MCPツール呼び出し:
    }
    ```
 
-   **ユーザーが「保持する」を選択した場合:**
+   **If user selects "Keep":**
 
-   タスクをクリアせず、そのまま保持します。ユーザーに簡潔に通知：
+   Keep tasks without clearing. Notify user concisely:
    ```
-   タスクを保持しました。
+   Tasks kept.
    ```
 
-4. **クリアのオプション**
+4. **Clear options**
 
-   `clearAll: false` の場合、`done` ステータスのタスクのみが削除されます。すべてのタスクをクリアする必要がある場合は、別途確認してから `clearAll: true` を設定します。
+   With `clearAll: false`, only tasks with `done` status are deleted. To clear all tasks, confirm separately then set `clearAll: true`.
 
-## 重要な注意事項
+## Important Notes
 
-### 1. タスクIDの管理
+### 1. Task ID Management
 
-`add_tasks` の結果として返されるタスクIDを記録し、後で `update_task` を呼び出す際に使用します。
+Record the task IDs returned from `mcp__task-workflow__add_tasks` for later use when calling `mcp__task-workflow__update_task`.
 
-タスクIDは各セッション内で独立して管理されます（セッションAのID 1とセッションBのID 1は別物）。
+Task IDs are managed independently within each session (ID 1 in session A and ID 1 in session B are different).
 
-### 2. エラーハンドリング
+### 2. Error Handling
 
-MCPツールの呼び出しが失敗した場合でも、実装作業は継続します。タスク管理はあくまで補助的な機能であり、メインの作業をブロックしてはいけません。
+Even if MCP tool calls fail, continue implementation work. Task management is supplementary functionality and must not block main work.
 
-### 3. ユーザーへの通知
+### 3. User Notifications
 
-タスクを作成・更新した際は、簡潔にユーザーに通知します：
+When creating or updating tasks, notify the user concisely:
 
-**良い例:**
+**Good example:**
 ```
-タスクを作成しました（セッション: my-project、5件）
-```
-
-**悪い例:**
-```
-タスク管理システムにアクセスし、add_tasksツールを使用して、
-以下の5つのタスクをmy-projectセッションに追加しました...
+Created tasks (session: my-project, 5 items)
 ```
 
-### 4. セッション名の確認
-
-セッション名を取得したら、最初のタスク作成時にユーザーに確認してもらうことを推奨します：
-
+**Bad example:**
 ```
-実行計画のタスクをセッション「my-project」に追加します。
+Accessed task management system, used mcp__task-workflow__add_tasks tool to add the following 5 tasks to the my-project session...
 ```
 
-### 5. タスククリアの確認
+### 4. Session Name Confirmation
 
-タスクをクリアする際は、**必ずユーザーに確認を求めてください**。自動的にタスクを削除してはいけません。
+After getting the session name, recommend confirming with user when creating first task:
 
-確認のタイミング:
-- すべてのタスクが `done` または `check` になった時
-- ユーザーが明示的にタスクのクリアを依頼した時
-
-確認せずにクリアしてはいけない理由:
-- ユーザーが後で参照したい場合がある
-- 作業記録として残したい場合がある
-- TUIで完了状態を確認したい場合がある
-
-## 使用例
-
-### 例1: 新機能の実装
-
-**ユーザーのリクエスト:**
 ```
-新しいユーザー認証機能を実装してください
+Adding execution plan tasks to session "my-project".
 ```
 
-**Claude Codeの動作:**
+### 5. Task Clear Confirmation
 
-1. EnterPlanMode を使用して実行計画を作成
-2. 計画の各ステップを抽出
-3. セッション名を取得: `basename $(pwd)` → "my-app"
-4. タスクを作成:
+When clearing tasks, **ALWAYS ask for user confirmation**. Never automatically delete tasks.
+
+Confirmation timing:
+- When all tasks become `done` or `check`
+- When user explicitly requests task clearing
+
+Reasons not to clear without confirmation:
+- User may want to reference later
+- User may want to keep as work record
+- User may want to check completion status in TUI
+
+## Usage Examples
+
+### Example 1: Implementing New Feature
+
+**User request:**
+```
+Please implement a new user authentication feature
+```
+
+**Claude Code behavior:**
+
+1. Use EnterPlanMode to create execution plan
+2. Extract each step from the plan
+3. Get session name: `basename $(pwd)` → "my-app"
+4. Create tasks:
    ```json
    {
-     "name": "add_tasks",
+     "name": "mcp__task-workflow__add_tasks",
      "arguments": {
        "sessionId": "my-app",
        "titles": [
-         "認証スキーマの作成",
-         "ログインAPIの実装",
-         "トークン検証の追加",
-         "テストの作成"
+         "Create authentication schema",
+         "Implement login API",
+         "Add token validation",
+         "Create tests"
        ]
      }
    }
    ```
-5. ExitPlanMode で計画を確定
-6. 各ステップを実装する際:
-   - ステップ開始時: `update_task` で `in_progress` に設定
-   - ステップ完了時: `update_task` で `done` または `check` に設定
-7. すべてのタスクが完了したら:
-   - ユーザーに確認: 「完了済みタスクをクリアしますか？」
-   - ユーザーが承認した場合のみ `clear_tasks` を実行
+5. Confirm plan with ExitPlanMode
+6. When implementing each step:
+   - Step start: Set to `in_progress` with `mcp__task-workflow__update_task`
+   - Step complete: Set to `done` or `check` with `mcp__task-workflow__update_task`
+7. When all tasks complete:
+   - Confirm with user: "Clear completed tasks?"
+   - Only execute `mcp__task-workflow__clear_tasks` if user approves
 
-### 例2: エラー発生時の処理
+### Example 2: Error Handling
 
-**状況:**
+**Situation:**
 ```
-ビルド中にTypeScriptのエラーが発生
+TypeScript error occurred during build
 ```
 
-**Claude Codeの動作:**
+**Claude Code behavior:**
 
-1. 該当タスクを `error` に更新:
+1. Update corresponding task to `error`:
    ```json
    {
-     "name": "update_task",
+     "name": "mcp__task-workflow__update_task",
      "arguments": {
        "sessionId": "my-app",
        "id": 2,
@@ -322,65 +343,65 @@ MCPツールの呼び出しが失敗した場合でも、実装作業は継続�
      }
    }
    ```
-2. エラーを修正
-3. 再度ビルドして成功したら `check` に更新（ビルド結果の確認が必要）
+2. Fix the error
+3. Build again successfully, then update to `check` (build results need confirmation)
 
-### 例3: 全タスク完了後のクリア
+### Example 3: Clearing After All Tasks Complete
 
-**状況:**
+**Situation:**
 ```
-すべてのタスクが done または check ステータスになった
+All tasks have done or check status
 ```
 
-**Claude Codeの動作:**
+**Claude Code behavior:**
 
-1. 全タスク完了を検出
+1. Detect all tasks complete
 
-2. ユーザーに確認を求める（AskUserQuestion）:
+2. Request user confirmation (AskUserQuestion):
    ```
-   すべてのタスクが完了しました。完了済みタスク（doneステータス）をクリアしますか？
+   All tasks completed. Clear completed tasks (done status)?
 
-   [ クリアする ]  [ 保持する ]
+   [ Clear ]  [ Keep ]
    ```
 
-3. ユーザーが「クリアする」を選択した場合:
+3. If user selects "Clear":
    ```json
    {
-     "name": "clear_tasks",
+     "name": "mcp__task-workflow__clear_tasks",
      "arguments": {
        "sessionId": "my-app",
        "clearAll": false
      }
    }
    ```
-   通知: 「完了済みタスクをクリアしました。」
+   Notify: "Cleared completed tasks."
 
-4. ユーザーが「保持する」を選択した場合:
-   通知: 「タスクを保持しました。」
+4. If user selects "Keep":
+   Notify: "Tasks kept."
 
-## テスト
+## Testing
 
-スキルが正しく動作するか確認するには：
+To verify the skill works correctly:
 
-1. TUIアプリを起動:
+1. Start TUI app:
    ```bash
    SESSION=$(basename $(pwd)) npm start
    ```
 
-2. Claude Codeに実行計画を依頼:
+2. Request execution plan from Claude Code:
    ```
-   簡単な機能を3ステップで実装してください
+   Please implement a simple feature in 3 steps
    ```
 
-3. TUIでタスクが作成され、各ステップの完了時にステータスが更新されることを確認
+3. Verify in TUI that tasks are created and status updates when each step completes
 
-## まとめ
+## Summary
 
-このスキルを使用することで：
+By using this skill:
 
-- ✅ 実行計画が視覚的なタスクリストとして表示される
-- ✅ 進捗状況がリアルタイムで確認できる
-- ✅ ユーザーの承認が必要なステップが明確になる
-- ✅ 複数のプロジェクトを並行して管理できる（セッション分離）
+- ✅ Execution plan is displayed as visual task list
+- ✅ Progress can be checked in real-time
+- ✅ Steps requiring user approval are clearly identified
+- ✅ Multiple projects can be managed in parallel (session separation)
 
-タスク管理を意識せず、Claude Codeが自動的に進捗を記録してくれます。
+Claude Code automatically records progress without you needing to think about task management.
