@@ -20,9 +20,9 @@ export const ClearTasksSchema = z.object({
   clearAll: z.boolean().optional().default(false),
 });
 
-export function handleAddTasks(args: unknown) {
+export async function handleAddTasks(args: unknown) {
   const parsed = AddTasksSchema.parse(args);
-  const newTasks = addTasks(parsed.sessionId, parsed.titles);
+  const newTasks = await addTasks(parsed.sessionId, parsed.titles);
   return {
     content: [
       {
@@ -33,9 +33,9 @@ export function handleAddTasks(args: unknown) {
   };
 }
 
-export function handleUpdateTask(args: unknown) {
+export async function handleUpdateTask(args: unknown) {
   const parsed = UpdateTaskSchema.parse(args);
-  const updatedTask = updateTask(parsed.sessionId, parsed.id, parsed.status as TaskStatus);
+  const updatedTask = await updateTask(parsed.sessionId, parsed.id, parsed.status as TaskStatus);
 
   if (!updatedTask) {
     return {
@@ -59,9 +59,9 @@ export function handleUpdateTask(args: unknown) {
   };
 }
 
-export function handleClearTasks(args: unknown) {
+export async function handleClearTasks(args: unknown) {
   const parsed = ClearTasksSchema.parse(args);
-  const count = clearTasks(parsed.sessionId, parsed.clearAll);
+  const count = await clearTasks(parsed.sessionId, parsed.clearAll);
   return {
     content: [
       {

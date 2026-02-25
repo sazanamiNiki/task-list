@@ -93,11 +93,11 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
   try {
     switch (request.params.name) {
       case 'add_tasks':
-        return handleAddTasks(request.params.arguments);
+        return await handleAddTasks(request.params.arguments);
       case 'update_task':
-        return handleUpdateTask(request.params.arguments);
+        return await handleUpdateTask(request.params.arguments);
       case 'clear_tasks':
-        return handleClearTasks(request.params.arguments);
+        return await handleClearTasks(request.params.arguments);
       default:
         return {
           content: [
