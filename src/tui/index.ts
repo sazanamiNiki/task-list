@@ -81,6 +81,13 @@ const titleText = blessed.text({
   tags: true,
 });
 
+const indicatorText = blessed.text({
+  top: 1,
+  left: 5,
+  content: '',
+  tags: true,
+});
+
 const errorText = blessed.text({
   top: 2,
   left: 2,
@@ -93,6 +100,7 @@ const errorText = blessed.text({
 
 screen.append(mainBox);
 mainBox.append(titleText);
+mainBox.append(indicatorText);
 mainBox.append(errorText);
 
 let tasks: Task[] = [];
@@ -112,6 +120,42 @@ function showError(message: string) {
     render();
   }, 3000);
   render();
+}
+
+// 文字列の表示幅を計算（全角文字は2幅、半角は1幅）
+function getStringWidth(str: string): number {
+  let width = 0;
+  for (const char of str) {
+    const code = char.charCodeAt(0);
+    // 全角文字の判定（簡易版）
+    if (
+      (code >= 0x3000 && code <= 0x9FFF) || // CJK統合漢字など
+      (code >= 0xFF00 && code <= 0xFFEF) || // 全角英数字
+      (code >= 0xAC00 && code <= 0xD7AF)    // ハングル
+    ) {
+      width += 2;
+    } else {
+      width += 1;
+    }
+  }
+  return width;
+}
+
+// 指定した表示幅に収まるように文字列を切り詰める
+function truncateString(str: string, maxWidth: number): string {
+  let width = 0;
+  let result = '';
+
+  for (const char of str) {
+    const charWidth = getStringWidth(char);
+    if (width + charWidth > maxWidth - 3) { // "..."の分を確保
+      return result + '...';
+    }
+    result += char;
+    width += charWidth;
+  }
+
+  return result;
 }
 
 let configContent = '';
@@ -190,6 +234,23 @@ function render() {
   taskElements.forEach((el) => el.destroy());
   taskElements = [];
 
+  // 画面の高さを取得（枠とタイトル分を引く、インジケーター行も考慮）
+  const availableHeight = (mainBox.height as number) - 5;
+
+  // 未完了タスクと完了タスクに分ける
+  const incompleteTasks = tasks.filter((t) => t.status !== 'done');
+  const completedTasks = tasks.filter((t) => t.status === 'done');
+
+  // スクロールインジケーターを2行目に表示
+  if (tasks.length > 0 && tasks.length > availableHeight) {
+    const displayCount = Math.min(incompleteTasks.length, availableHeight) +
+      Math.max(0, availableHeight - incompleteTasks.length);
+    const hiddenCompleted = Math.max(0, completedTasks.length - (availableHeight - incompleteTasks.length));
+    indicatorText.setContent(`{gray-fg}[Showing: ${displayCount}/${tasks.length}${hiddenCompleted > 0 ? `, ${hiddenCompleted} done hidden` : ''}]{/gray-fg}`);
+  } else {
+    indicatorText.setContent('');
+  }
+
   if (errorMessage) {
     errorText.setContent(`{red-fg}${errorMessage}{/red-fg}`);
   } else {
@@ -198,7 +259,7 @@ function render() {
 
   if (tasks.length === 0) {
     const noTasksText = blessed.text({
-      top: 2,
+      top: 3,
       left: 2,
       content: '{gray-fg}No tasks{/gray-fg}',
       tags: true,
@@ -206,18 +267,49 @@ function render() {
     mainBox.append(noTasksText);
     taskElements.push(noTasksText);
   } else {
-    tasks.forEach((task, index) => {
+
+    // 未完了タスクを優先度順に並び替え
+    incompleteTasks.sort((a, b) => {
+      const statusOrder: Record<string, number> = {
+        pending: 0,
+        in_progress: 1,
+        check: 2,
+        error: 3
+      };
+      return (statusOrder[a.status] || 99) - (statusOrder[b.status] || 99);
+    });
+
+    // 表示するタスクを決定
+    let displayTasks: Task[] = [];
+
+    if (incompleteTasks.length >= availableHeight) {
+      // 未完了タスクだけで画面が埋まる場合
+      displayTasks = incompleteTasks.slice(0, availableHeight);
+    } else {
+      // 未完了タスクを全て表示し、残りのスペースに完了タスクを表示
+      displayTasks = [...incompleteTasks];
+      const remainingSpace = availableHeight - incompleteTasks.length;
+
+      if (completedTasks.length > 0) {
+        // 完了タスクが多い場合は、最新のものから表示（最後の完了から逆順）
+        const displayCompletedTasks = completedTasks.slice(-remainingSpace);
+        displayTasks = [...displayTasks, ...displayCompletedTasks];
+      }
+    }
+
+    displayTasks.forEach((task, index) => {
       const statusConfig = config.statusDisplay[task.status];
       const icon = statusConfig.useSpinner
         ? SPINNER_FRAMES[spinnerFrame]
         : statusConfig.icon;
 
       const taskBox = blessed.box({
-        top: 2 + index,
+        top: 3 + index,
         left: 2,
         height: 1,
         width: '100%-4',
         tags: true,
+        overflow: 'hidden',
       });
 
       const iconText = blessed.text({
@@ -226,14 +318,27 @@ function render() {
         tags: true,
       });
 
+      // 利用可能な幅を計算（画面幅 - 左マージン - アイコン領域 - 右マージン - 枠線）
+      const screenWidth = (mainBox.width as number);
+      const availableWidth = screenWidth - 4 - 4 - 4; // 左マージン(2) + アイコン領域(4) + 右マージン(2) + 枠線(2)
+
+      // タイトルを切り詰める（全角文字を考慮）
+      let displayTitle = task.title;
+      const titleWidth = getStringWidth(displayTitle);
+      if (titleWidth > availableWidth) {
+        displayTitle = truncateString(displayTitle, availableWidth);
+      }
+
       const titleContent = statusConfig.strikethrough
-        ? `{${statusConfig.textColor}-fg}{strikethrough}${task.title}{/strikethrough}{/${statusConfig.textColor}-fg}`
-        : `{${statusConfig.textColor}-fg}${task.title}{/${statusConfig.textColor}-fg}`;
+        ? `{${statusConfig.textColor}-fg}{strikethrough}${displayTitle}{/strikethrough}{/${statusConfig.textColor}-fg}`
+        : `{${statusConfig.textColor}-fg}${displayTitle}{/${statusConfig.textColor}-fg}`;
 
       const taskTitle = blessed.text({
         left: 4,
+        width: '100%-4',
         content: titleContent,
         tags: true,
+        wrap: false,
       });
 
       taskBox.append(iconText);
