@@ -45,7 +45,7 @@ node dist/tui/index.js
 SESSION=project-b node dist/tui/index.js
 ```
 
-TUIアプリはカレントディレクトリの `tasks.json` を監視し、指定されたセッションのタスクのみを表示します。
+TUIアプリはtask-listリポジトリのルートディレクトリの `tasks.json` を監視し、指定されたセッションのタスクのみを表示します。
 
 **終了方法**: `Esc`、`q`、または `Ctrl+C`
 
@@ -60,6 +60,23 @@ node dist/mcp/index.js
 ```
 
 MCPサーバーはstdio経由でModel Context Protocolに準拠した通信を行います。Claude Codeの設定ファイルに登録することで、Claude Code経由でタスク操作が可能になります。
+
+**重要**: `tasks.json` はMCPサーバーの実行場所に基づいて、常にtask-listリポジトリのルートディレクトリに保存されます。環境変数による設定は不要です。
+
+Claude Codeの設定例（`~/.config/claude-code/config.json` または `~/.mcp.json`）:
+
+```json
+{
+  "mcpServers": {
+    "task-workflow": {
+      "command": "node",
+      "args": ["/absolute/path/to/task-list/dist/mcp/index.js"]
+    }
+  }
+}
+```
+
+詳細なインストール手順は [skills/task-workflow/INSTALL.md](skills/task-workflow/INSTALL.md) を参照してください。
 
 ## タスクステータス（デフォルト）
 

@@ -2,13 +2,8 @@
   "mcpServers": {
     "task-workflow": {
       "command": "node",
-      "args": ["dist/mcp/index.js"],
-      "cwd": "/path/to/task-list",
-      "description": "Task Monitor TUI - セッション対応タスク管理システム",
-      "env": {
-        "NODE_ENV": "production",
-        "TASKS_DIR": "/path/to/task-list"
-      }
+      "args": ["/path/to/task-list/dist/mcp/index.js"],
+      "description": "Task Monitor TUI - セッション対応タスク管理システム（tasks.jsonは自動的にtask-listルートに保存されます）"
     }
   }
 }

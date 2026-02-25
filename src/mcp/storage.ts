@@ -1,10 +1,20 @@
 import { readFileSync, writeFileSync, existsSync, renameSync } from 'fs';
-import { join } from 'path';
+import { join, dirname } from 'path';
+import { fileURLToPath } from 'url';
 import { Task, TaskStatus, SessionTasks } from '../types.js';
 
-const TASKS_DIR = process.env.TASKS_DIR || process.cwd();
-const TASKS_FILE = join(TASKS_DIR, 'tasks.json');
-const BACKUP_FILE = join(TASKS_DIR, 'tasks.json.backup');
+// このファイルの場所から絶対パスを取得
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+
+// プロジェクトルートは dist/mcp から2階層上
+const PROJECT_ROOT = join(__dirname, '../..');
+const TASKS_FILE = join(PROJECT_ROOT, 'tasks.json');
+const BACKUP_FILE = join(PROJECT_ROOT, 'tasks.json.backup');
+
+// デバッグログ（stderrに出力）
+console.error('[DEBUG] PROJECT_ROOT:', PROJECT_ROOT);
+console.error('[DEBUG] TASKS_FILE:', TASKS_FILE);
 
 export function readSessionTasks(): SessionTasks {
   if (!existsSync(TASKS_FILE)) {

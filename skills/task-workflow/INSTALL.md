@@ -88,20 +88,16 @@ nano ~/.config/claude-code/config.json
   "mcpServers": {
     "task-workflow": {
       "command": "node",
-      "args": ["/absolute/path/to/task-list/dist/mcp/index.js"],
-      "cwd": "/absolute/path/to/task-list",
-      "env": {
-        "TASKS_DIR": "/absolute/path/to/task-list"
-      }
+      "args": ["/absolute/path/to/task-list/dist/mcp/index.js"]
     }
   }
 }
 ```
 
 **重要**:
-- パスは絶対パスで指定してください
-- `TASKS_DIR`環境変数でtasks.jsonの保存先を指定します（task-listのルートディレクトリ）
-- この設定により、Claude Codeをどのディレクトリで実行しても、tasks.jsonは常にtask-listのルートに作成されます
+- `args`は**絶対パス**で指定してください（Claude Codeの実行ディレクトリに依存しません）
+- `tasks.json`はtask-listリポジトリのルートディレクトリに自動的に作成されます
+- Claude Codeをどのディレクトリで実行しても、常に同じ場所（task-listのルート）にタスクデータが保存されます
 
 ### スキルのインストール
 
@@ -163,11 +159,7 @@ notepad $env:USERPROFILE\.config\claude-code\config.json
   "mcpServers": {
     "task-workflow": {
       "command": "node",
-      "args": ["C:\\path\\to\\task-list\\dist\\mcp\\index.js"],
-      "cwd": "C:\\path\\to\\task-list",
-      "env": {
-        "TASKS_DIR": "C:\\path\\to\\task-list"
-      }
+      "args": ["C:\\path\\to\\task-list\\dist\\mcp\\index.js"]
     }
   }
 }
@@ -286,6 +278,22 @@ cp tasks.json ~/task-list-backup-$(date +%Y%m%d).json
 ```
 
 ## トラブルシューティング
+
+### tasks.jsonの保存場所
+
+**仕様**: `tasks.json`は常にtask-listリポジトリのルートディレクトリに保存されます
+
+**確認方法**:
+
+MCPサーバーのデバッグログ（stderrに出力）で以下を確認:
+```
+[DEBUG] PROJECT_ROOT: /absolute/path/to/task-list
+[DEBUG] TASKS_FILE: /absolute/path/to/task-list/tasks.json
+```
+
+Claude Codeを再起動後、タスクを追加して`/path/to/task-list/tasks.json`が作成されることを確認してください。
+
+**注意**: 以前の環境変数`TASKS_DIR`による設定方法は廃止されました。Claude CodeのMCP設定の`env`フィールドが正しく読み込まれない問題があったため、固定パス方式に変更しています。
 
 ### ビルドエラー
 
