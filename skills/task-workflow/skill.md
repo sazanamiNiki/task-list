@@ -1,6 +1,35 @@
 # Task Workflow Skill
 
-Automatically manages tasks based on execution plans.
+Automatically manages tasks with real-time progress tracking in external TUI monitor.
+
+## AUTO-TRIGGER CONDITIONS — When to use this skill automatically
+
+**Claude Code MUST automatically use this skill when ANY of these conditions are met:**
+
+1. **Multi-step tasks:** User request involves 3+ distinct implementation steps
+2. **Explicit task lists:** User provides numbered steps or checkboxes
+3. **Sequential file modifications:** Task requires editing multiple files in sequence
+4. **Implementation plans:** User provides or requests an execution plan
+5. **Verification phases:** Task includes explicit testing/validation steps
+6. **Plan Mode usage:** When using EnterPlanMode/ExitPlanMode
+
+**Detection examples:**
+
+- ✅ "Add login feature with these steps: 1) schema, 2) API, 3) tests"
+- ✅ "Implement authentication system" (requires 3+ steps)
+- ✅ "Fix bug in payment flow and add tests" (2 distinct phases)
+- ❌ "Fix typo in README" (single trivial step)
+- ❌ "What does this function do?" (research, not implementation)
+
+**Workflow when auto-triggered:**
+
+1. Immediately get session name: `basename $(pwd)`
+2. Identify distinct steps from user request or your implementation plan
+3. Call `mcp__task-workflow__add_tasks` with step titles
+4. Update status as you progress through each step
+5. Confirm with user before clearing completed tasks
+
+---
 
 ## MANDATORY RULES — Claude Code MUST follow these rules when this skill is loaded
 
